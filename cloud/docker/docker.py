@@ -272,6 +272,20 @@ options:
         docker-py >= 0.5.0.
     default: false
     version_added: "1.9"
+  cap_add:
+    description:
+      - Add capabilities for the container. Requires docker-py >= 0.5.0.
+    required: false
+    default: false
+    aliases: []
+    version_added: "1.9"
+  cap_drop:
+    description:
+      - Drop capabilities for the container. Requires docker-py >= 0.5.0.
+    required: false
+    default: false
+    aliases: []
+    version_added: "1.9"
 
 author: 
     - "Cove Schneider (@cove)"
@@ -528,6 +542,8 @@ class DockerManager(object):
             'extra_hosts': ((0, 7, 0), '1.3.1'),
             'pid': ((1, 0, 0), '1.17'),
             'log_driver': ((1, 2, 0), '1.18'),
+            'cap_add': ((0, 5, 0), '1.14'),
+            'cap_drop': ((0, 5, 0), '1.14'),
             # Clientside only
             'insecure_registry': ((0, 5, 0), '0.0')
             }
@@ -1251,7 +1267,8 @@ class DockerManager(object):
 
         optionals = {}
         for optional_param in ('dns', 'volumes_from', 'restart_policy',
-                'restart_policy_retry', 'pid', 'extra_hosts', 'log_driver'):
+                'restart_policy_retry', 'pid', 'extra_hosts', 'log_driver',
+                'cap_add', 'cap_drop'):
             optionals[optional_param] = self.module.params.get(optional_param)
 
         if optionals['dns'] is not None:
@@ -1281,6 +1298,14 @@ class DockerManager(object):
             log_config = docker.utils.LogConfig(type=docker.utils.LogConfig.types.JSON)
             log_config.type = optionals['log_driver']
             params['log_config'] = log_config
+
+        if optionals['cap_add'] is not None:
+            self.ensure_capability('cap_add')
+            params['cap_add'] = optionals['cap_add']
+
+        if optionals['cap_drop'] is not None:
+            self.ensure_capability('cap_drop')
+            params['cap_drop'] = optionals['cap_drop']
 
         return docker.utils.create_host_config(**params)
 
@@ -1518,6 +1543,8 @@ def main():
             pid             = dict(default=None),
             insecure_registry = dict(default=False, type='bool'),
             log_driver      = dict(default=None, choices=['json-file', 'none', 'syslog']),
+            cap_add         = dict(default=None, type='list'),
+            cap_drop        = dict(default=None, type='list'),
         ),
         required_together = (
             ['tls_client_cert', 'tls_client_key'],
